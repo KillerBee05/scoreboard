@@ -34,8 +34,13 @@ export const SCREEN = {
 
 // Button colors
 export const BUTTONS = {
-  primary: '#4A90D9',       // Main action buttons
+  primary: '#E56020',       // Basketball orange - main action buttons
   danger: '#D94A4A',        // Reset/delete buttons
   success: '#4AD97A',       // Confirm buttons
   disabled: '#555555',      // Disabled state
+};
+
+// Basketball theme
+export const BASKETBALL = {
+  primary: '#E56020',       // Basketball orange
 };
