@@ -20,11 +20,28 @@ const GAME_TYPES = ['Quarters', 'Halves', 'Time Limit'];
 // Scoring options
 const SCORING_OPTIONS = ['1s & 2s', '2s & 3s'];
 
+// Shot clock options
+const SHOT_CLOCK_OPTIONS = ['24s', '30s'];
+
+// Foul limit options
+const FOUL_LIMIT_OPTIONS = ['5', '6'];
+
+// Timeout options
+const TIMEOUT_OPTIONS = ['3', '5', '7'];
+
 export default function BasketballSettingsScreen({ navigation }) {
   // Game settings state
   const [gameType, setGameType] = useState('Quarters');
   const [timeMinutes, setTimeMinutes] = useState('12');
   const [scoringMode, setScoringMode] = useState('2s & 3s');
+
+  // Optional features state
+  const [shotClockEnabled, setShotClockEnabled] = useState(false);
+  const [shotClockDuration, setShotClockDuration] = useState('24s');
+  const [foulsEnabled, setFoulsEnabled] = useState(false);
+  const [foulLimit, setFoulLimit] = useState('5');
+  const [timeoutsEnabled, setTimeoutsEnabled] = useState(false);
+  const [timeoutsPerTeam, setTimeoutsPerTeam] = useState('3');
 
   // Get the label for time input based on game type
   const getTimeLabel = () => {
@@ -115,6 +132,149 @@ export default function BasketballSettingsScreen({ navigation }) {
               </TouchableOpacity>
             ))}
           </View>
+        </View>
+
+        {/* Optional Features Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>OPTIONAL</Text>
+
+          {/* Shot Clock */}
+          <View style={styles.optionalRow}>
+            <Text style={styles.label}>Shot Clock</Text>
+            <View style={styles.toggleContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.toggleButton,
+                  shotClockEnabled && styles.toggleButtonSelected,
+                ]}
+                onPress={() => setShotClockEnabled(true)}
+              >
+                <Text style={[styles.toggleText, shotClockEnabled && styles.toggleTextSelected]}>On</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.toggleButton,
+                  !shotClockEnabled && styles.toggleButtonSelected,
+                ]}
+                onPress={() => setShotClockEnabled(false)}
+              >
+                <Text style={[styles.toggleText, !shotClockEnabled && styles.toggleTextSelected]}>Off</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          {shotClockEnabled && (
+            <View style={styles.subOptions}>
+              <Text style={styles.subLabel}>Duration</Text>
+              <View style={styles.chipsContainer}>
+                {SHOT_CLOCK_OPTIONS.map((option) => (
+                  <TouchableOpacity
+                    key={option}
+                    style={[
+                      styles.chip,
+                      shotClockDuration === option && styles.chipSelected,
+                    ]}
+                    onPress={() => setShotClockDuration(option)}
+                  >
+                    <Text style={[styles.chipText, shotClockDuration === option && styles.chipTextSelected]}>
+                      {option}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Fouls */}
+          <View style={styles.optionalRow}>
+            <Text style={styles.label}>Fouls</Text>
+            <View style={styles.toggleContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.toggleButton,
+                  foulsEnabled && styles.toggleButtonSelected,
+                ]}
+                onPress={() => setFoulsEnabled(true)}
+              >
+                <Text style={[styles.toggleText, foulsEnabled && styles.toggleTextSelected]}>On</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.toggleButton,
+                  !foulsEnabled && styles.toggleButtonSelected,
+                ]}
+                onPress={() => setFoulsEnabled(false)}
+              >
+                <Text style={[styles.toggleText, !foulsEnabled && styles.toggleTextSelected]}>Off</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          {foulsEnabled && (
+            <View style={styles.subOptions}>
+              <Text style={styles.subLabel}>Limit</Text>
+              <View style={styles.chipsContainer}>
+                {FOUL_LIMIT_OPTIONS.map((option) => (
+                  <TouchableOpacity
+                    key={option}
+                    style={[
+                      styles.chip,
+                      foulLimit === option && styles.chipSelected,
+                    ]}
+                    onPress={() => setFoulLimit(option)}
+                  >
+                    <Text style={[styles.chipText, foulLimit === option && styles.chipTextSelected]}>
+                      {option}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Timeouts */}
+          <View style={styles.optionalRow}>
+            <Text style={styles.label}>Timeouts</Text>
+            <View style={styles.toggleContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.toggleButton,
+                  timeoutsEnabled && styles.toggleButtonSelected,
+                ]}
+                onPress={() => setTimeoutsEnabled(true)}
+              >
+                <Text style={[styles.toggleText, timeoutsEnabled && styles.toggleTextSelected]}>On</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.toggleButton,
+                  !timeoutsEnabled && styles.toggleButtonSelected,
+                ]}
+                onPress={() => setTimeoutsEnabled(false)}
+              >
+                <Text style={[styles.toggleText, !timeoutsEnabled && styles.toggleTextSelected]}>Off</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          {timeoutsEnabled && (
+            <View style={styles.subOptions}>
+              <Text style={styles.subLabel}>Per Team</Text>
+              <View style={styles.chipsContainer}>
+                {TIMEOUT_OPTIONS.map((option) => (
+                  <TouchableOpacity
+                    key={option}
+                    style={[
+                      styles.chip,
+                      timeoutsPerTeam === option && styles.chipSelected,
+                    ]}
+                    onPress={() => setTimeoutsPerTeam(option)}
+                  >
+                    <Text style={[styles.chipText, timeoutsPerTeam === option && styles.chipTextSelected]}>
+                      {option}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -231,5 +391,43 @@ const styles = StyleSheet.create({
   },
   scoringTextSelected: {
     color: '#FFFFFF',
+  },
+  // Optional features
+  optionalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+    marginTop: 10,
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    gap: 5,
+  },
+  toggleButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 15,
+    backgroundColor: '#F0F0F0',
+  },
+  toggleButtonSelected: {
+    backgroundColor: BASKETBALL.primary,
+  },
+  toggleText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: SCREEN.text,
+  },
+  toggleTextSelected: {
+    color: '#FFFFFF',
+  },
+  subOptions: {
+    marginLeft: 20,
+    marginBottom: 20,
+  },
+  subLabel: {
+    fontSize: 14,
+    color: SCREEN.textDim,
+    marginBottom: 8,
   },
 });
