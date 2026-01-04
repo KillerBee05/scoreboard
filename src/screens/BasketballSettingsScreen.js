@@ -9,7 +9,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { SCREEN, BASKETBALL } from '../constants/colors';
+import { SCREEN, BASKETBALL, TEAM_COLORS } from '../constants/colors';
 
 // Consistent top padding for all screens
 const TOP_PADDING = 50;
@@ -42,6 +42,15 @@ export default function BasketballSettingsScreen({ navigation }) {
   const [foulLimit, setFoulLimit] = useState('5');
   const [timeoutsEnabled, setTimeoutsEnabled] = useState(false);
   const [timeoutsPerTeam, setTimeoutsPerTeam] = useState('3');
+
+  // Team settings state
+  const [team1Name, setTeam1Name] = useState('');
+  const [team1Color, setTeam1Color] = useState(TEAM_COLORS.red);
+  const [team2Name, setTeam2Name] = useState('');
+  const [team2Color, setTeam2Color] = useState(TEAM_COLORS.blue);
+
+  // Color options array for rendering
+  const colorOptions = Object.entries(TEAM_COLORS);
 
   // Get the label for time input based on game type
   const getTimeLabel = () => {
@@ -276,6 +285,85 @@ export default function BasketballSettingsScreen({ navigation }) {
             </View>
           )}
         </View>
+
+        {/* Teams Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>TEAMS</Text>
+
+          {/* Team 1 */}
+          <Text style={styles.label}>Team 1</Text>
+          <TextInput
+            style={styles.teamNameInput}
+            value={team1Name}
+            onChangeText={setTeam1Name}
+            placeholder="Enter team name"
+            placeholderTextColor={SCREEN.textDim}
+          />
+          <View style={styles.colorPickerContainer}>
+            {colorOptions.map(([name, color]) => (
+              <TouchableOpacity
+                key={name}
+                style={[
+                  styles.colorCircle,
+                  { backgroundColor: color },
+                  team1Color === color && styles.colorCircleSelected,
+                ]}
+                onPress={() => setTeam1Color(color)}
+              />
+            ))}
+          </View>
+
+          {/* Team 2 */}
+          <Text style={[styles.label, { marginTop: 20 }]}>Team 2</Text>
+          <TextInput
+            style={styles.teamNameInput}
+            value={team2Name}
+            onChangeText={setTeam2Name}
+            placeholder="Enter team name"
+            placeholderTextColor={SCREEN.textDim}
+          />
+          <View style={styles.colorPickerContainer}>
+            {colorOptions.map(([name, color]) => (
+              <TouchableOpacity
+                key={name}
+                style={[
+                  styles.colorCircle,
+                  { backgroundColor: color },
+                  team2Color === color && styles.colorCircleSelected,
+                ]}
+                onPress={() => setTeam2Color(color)}
+              />
+            ))}
+          </View>
+        </View>
+
+        {/* Start Game Button */}
+        <TouchableOpacity
+          style={styles.startButton}
+          onPress={() => {
+            // Navigate to scoreboard with settings
+            navigation.navigate('BasketballScoreboard', {
+              gameType,
+              timeMinutes: parseInt(timeMinutes) || 12,
+              scoringMode,
+              shotClockEnabled,
+              shotClockDuration,
+              foulsEnabled,
+              foulLimit,
+              timeoutsEnabled,
+              timeoutsPerTeam,
+              team1Name: team1Name || 'Team 1',
+              team1Color,
+              team2Name: team2Name || 'Team 2',
+              team2Color,
+            });
+          }}
+        >
+          <Text style={styles.startButtonText}>START GAME</Text>
+        </TouchableOpacity>
+
+        {/* Bottom spacing */}
+        <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -429,5 +517,46 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: SCREEN.textDim,
     marginBottom: 8,
+  },
+  // Team settings
+  teamNameInput: {
+    height: 50,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    fontSize: 16,
+    color: SCREEN.text,
+    backgroundColor: '#F9F9F9',
+    marginBottom: 15,
+  },
+  colorPickerContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 10,
+  },
+  colorCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  colorCircleSelected: {
+    borderWidth: 3,
+    borderColor: SCREEN.text,
+  },
+  // Start button
+  startButton: {
+    backgroundColor: BASKETBALL.primary,
+    paddingVertical: 18,
+    borderRadius: 30,
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginTop: 20,
+  },
+  startButtonText: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: 'bold',
   },
 });
