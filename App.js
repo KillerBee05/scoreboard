@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 // Screens
 import HomeScreen from './src/screens/HomeScreen';
 import BasketballSettingsScreen from './src/screens/BasketballSettingsScreen';
+import BasketballScoreboardScreen from './src/screens/BasketballScoreboardScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -19,6 +20,7 @@ export default function App() {
       >
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="BasketballSettings" component={BasketballSettingsScreen} />
+        <Stack.Screen name="BasketballScoreboard" component={BasketballScoreboardScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
