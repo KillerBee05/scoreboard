@@ -5,6 +5,8 @@ import {
   StyleSheet,
   SafeAreaView,
   TouchableOpacity,
+  ScrollView,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SCOREBOARD, SCREEN, BASKETBALL } from '../constants/colors';
@@ -43,6 +45,25 @@ export default function BasketballScoreboardScreen({ navigation, route }) {
   const [timeRemaining, setTimeRemaining] = useState(timeMinutes * 60);
   const [isRunning, setIsRunning] = useState(false);
   const [currentPeriod, setCurrentPeriod] = useState(1);
+  const [gameStarted, setGameStarted] = useState(false);
+
+  // Reset clock with confirmation
+  const handleResetClock = () => {
+    Alert.alert(
+      'Reset Clock',
+      'Are you sure you want to reset the clock?',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes',
+          onPress: () => {
+            setTimeRemaining(timeMinutes * 60);
+            setIsRunning(false);
+          },
+        },
+      ]
+    );
+  };
 
   // Optional feature states
   const [team1Fouls, setTeam1Fouls] = useState(0);
@@ -75,6 +96,9 @@ export default function BasketballScoreboardScreen({ navigation, route }) {
 
   const scoreButtons = getScoreButtons();
 
+  // Get initial shot clock value from settings
+  const initialShotClock = parseInt(shotClockDuration) || 24;
+
   // Timer countdown effect
   useEffect(() => {
     let interval = null;
@@ -98,16 +122,44 @@ export default function BasketballScoreboardScreen({ navigation, route }) {
     };
   }, [isRunning, timeRemaining]);
 
+  // Shot clock countdown effect
+  useEffect(() => {
+    let interval = null;
+
+    if (shotClockEnabled && isRunning && shotClock > 0) {
+      interval = setInterval(() => {
+        setShotClock((prev) => prev - 1);
+      }, 1000);
+    }
+
+    // Stop game when shot clock hits 0
+    if (shotClockEnabled && shotClock === 0) {
+      setIsRunning(false);
+    }
+
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [isRunning, shotClock, shotClockEnabled]);
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={28} color={SCREEN.text} />
-        </TouchableOpacity>
+        {!gameStarted ? (
+          <TouchableOpacity style={styles.titleButton} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={28} color={SCREEN.text} style={styles.backIcon} />
+            <Text style={styles.title}>Scoreboard</Text>
+          </TouchableOpacity>
+        ) : (
+          <Text style={styles.title}>Scoreboard</Text>
+        )}
       </View>
 
-      {/* Scoreboard Card */}
+      <ScrollView style={styles.content}>
+        {/* Scoreboard Card */}
       <View style={styles.scoreboardCard}>
         {/* Timer */}
         <Text style={styles.timer}>{formatTime(timeRemaining)}</Text>
@@ -143,7 +195,13 @@ export default function BasketballScoreboardScreen({ navigation, route }) {
         {shotClockEnabled && (
           <View style={styles.optionalSection}>
             <Text style={styles.optionalLabel}>SHOT CLOCK</Text>
-            <Text style={styles.shotClockValue}>{shotClock}</Text>
+            <Text style={[
+              styles.shotClockValue,
+              shotClock <= 5 && styles.shotClockWarning,
+              shotClock === 0 && styles.shotClockExpired,
+            ]}>
+              {shotClock}
+            </Text>
           </View>
         )}
 
@@ -182,7 +240,10 @@ export default function BasketballScoreboardScreen({ navigation, route }) {
         <View style={styles.timerControls}>
           <TouchableOpacity
             style={[styles.timerButton, isRunning && styles.timerButtonActive]}
-            onPress={() => setIsRunning(!isRunning)}
+            onPress={() => {
+              if (!gameStarted) setGameStarted(true);
+              setIsRunning(!isRunning);
+            }}
           >
             <Ionicons
               name={isRunning ? 'pause' : 'play'}
@@ -193,17 +254,38 @@ export default function BasketballScoreboardScreen({ navigation, route }) {
               {isRunning ? 'Pause' : 'Play'}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.resetButton}
-            onPress={() => {
-              setTimeRemaining(timeMinutes * 60);
-              setIsRunning(false);
-            }}
-          >
-            <Ionicons name="refresh" size={24} color="#FFFFFF" />
-            <Text style={styles.timerButtonText}>Reset Clock</Text>
-          </TouchableOpacity>
+          {shotClockEnabled && (
+            <TouchableOpacity
+              style={styles.shotClockResetButton}
+              onPress={() => setShotClock(initialShotClock)}
+            >
+              <Ionicons name="refresh" size={20} color="#FFFFFF" />
+              <Text style={styles.shotClockResetText}>Reset Shot Clock</Text>
+            </TouchableOpacity>
+          )}
+          {!shotClockEnabled && (
+            <TouchableOpacity
+              style={styles.resetButton}
+              onPress={handleResetClock}
+            >
+              <Ionicons name="refresh" size={24} color="#FFFFFF" />
+              <Text style={styles.timerButtonText}>Reset Clock</Text>
+            </TouchableOpacity>
+          )}
         </View>
+
+        {/* Reset Clock - Separate row if shot clock enabled */}
+        {shotClockEnabled && (
+          <View style={styles.resetClockRow}>
+            <TouchableOpacity
+              style={styles.resetButton}
+              onPress={handleResetClock}
+            >
+              <Ionicons name="refresh" size={24} color="#FFFFFF" />
+              <Text style={styles.timerButtonText}>Reset Clock</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Score Controls */}
         <View style={styles.scoreControlsRow}>
@@ -215,19 +297,21 @@ export default function BasketballScoreboardScreen({ navigation, route }) {
               {scoreButtons.map((points) => (
                 <TouchableOpacity
                   key={points}
-                  style={styles.scoreButton}
+                  style={[styles.scoreButton, !gameStarted && styles.scoreButtonDisabled]}
                   onPress={() => setTeam1Score(team1Score + points)}
+                  disabled={!gameStarted}
                 >
-                  <Text style={styles.scoreButtonText}>+{points}</Text>
+                  <Text style={[styles.scoreButtonText, !gameStarted && styles.scoreButtonTextDisabled]}>+{points}</Text>
                 </TouchableOpacity>
               ))}
             </View>
             <Text style={styles.scoreActionLabel}>Remove Points</Text>
             <TouchableOpacity
-              style={[styles.scoreButton, styles.minusButton]}
+              style={[styles.scoreButton, styles.minusButton, !gameStarted && styles.scoreButtonDisabled]}
               onPress={() => setTeam1Score(Math.max(0, team1Score - 1))}
+              disabled={!gameStarted}
             >
-              <Text style={styles.scoreButtonText}>-1</Text>
+              <Text style={[styles.scoreButtonText, !gameStarted && styles.scoreButtonTextDisabled]}>-1</Text>
             </TouchableOpacity>
           </View>
 
@@ -239,23 +323,136 @@ export default function BasketballScoreboardScreen({ navigation, route }) {
               {scoreButtons.map((points) => (
                 <TouchableOpacity
                   key={points}
-                  style={styles.scoreButton}
+                  style={[styles.scoreButton, !gameStarted && styles.scoreButtonDisabled]}
                   onPress={() => setTeam2Score(team2Score + points)}
+                  disabled={!gameStarted}
                 >
-                  <Text style={styles.scoreButtonText}>+{points}</Text>
+                  <Text style={[styles.scoreButtonText, !gameStarted && styles.scoreButtonTextDisabled]}>+{points}</Text>
                 </TouchableOpacity>
               ))}
             </View>
             <Text style={styles.scoreActionLabel}>Remove Points</Text>
             <TouchableOpacity
-              style={[styles.scoreButton, styles.minusButton]}
+              style={[styles.scoreButton, styles.minusButton, !gameStarted && styles.scoreButtonDisabled]}
               onPress={() => setTeam2Score(Math.max(0, team2Score - 1))}
+              disabled={!gameStarted}
             >
-              <Text style={styles.scoreButtonText}>-1</Text>
+              <Text style={[styles.scoreButtonText, !gameStarted && styles.scoreButtonTextDisabled]}>-1</Text>
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Fouls Controls - Only if enabled */}
+        {foulsEnabled && (
+          <View style={styles.foulsControlsSection}>
+            <Text style={styles.controlsSectionTitle}>Fouls</Text>
+            <View style={styles.foulsControlsRow}>
+              <View style={styles.foulControlItem}>
+                <Text style={styles.foulControlLabel}>{team1Name}</Text>
+                <View style={styles.counterControls}>
+                  <TouchableOpacity
+                    style={styles.counterButton}
+                    onPress={() => setTeam1Fouls(Math.max(0, team1Fouls - 1))}
+                  >
+                    <Text style={styles.counterButtonText}>-</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.counterValue}>{team1Fouls}</Text>
+                  <TouchableOpacity
+                    style={styles.counterButton}
+                    onPress={() => setTeam1Fouls(team1Fouls + 1)}
+                  >
+                    <Text style={styles.counterButtonText}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              <View style={styles.foulControlItem}>
+                <Text style={styles.foulControlLabel}>{team2Name}</Text>
+                <View style={styles.counterControls}>
+                  <TouchableOpacity
+                    style={styles.counterButton}
+                    onPress={() => setTeam2Fouls(Math.max(0, team2Fouls - 1))}
+                  >
+                    <Text style={styles.counterButtonText}>-</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.counterValue}>{team2Fouls}</Text>
+                  <TouchableOpacity
+                    style={styles.counterButton}
+                    onPress={() => setTeam2Fouls(team2Fouls + 1)}
+                  >
+                    <Text style={styles.counterButtonText}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Timeouts Controls - Only if enabled */}
+        {timeoutsEnabled && (
+          <View style={styles.timeoutsControlsSection}>
+            <Text style={styles.controlsSectionTitle}>Timeouts</Text>
+            <View style={styles.timeoutsControlsRow}>
+              <View style={styles.timeoutControlItem}>
+                <Text style={styles.timeoutControlLabel}>{team1Name}</Text>
+                <View style={styles.counterControls}>
+                  <TouchableOpacity
+                    style={styles.counterButton}
+                    onPress={() => setTeam1Timeouts(Math.max(0, team1Timeouts - 1))}
+                  >
+                    <Text style={styles.counterButtonText}>-</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.counterValue}>{team1Timeouts}</Text>
+                  <TouchableOpacity
+                    style={styles.counterButton}
+                    onPress={() => setTeam1Timeouts(team1Timeouts + 1)}
+                  >
+                    <Text style={styles.counterButtonText}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              <View style={styles.timeoutControlItem}>
+                <Text style={styles.timeoutControlLabel}>{team2Name}</Text>
+                <View style={styles.counterControls}>
+                  <TouchableOpacity
+                    style={styles.counterButton}
+                    onPress={() => setTeam2Timeouts(Math.max(0, team2Timeouts - 1))}
+                  >
+                    <Text style={styles.counterButtonText}>-</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.counterValue}>{team2Timeouts}</Text>
+                  <TouchableOpacity
+                    style={styles.counterButton}
+                    onPress={() => setTeam2Timeouts(team2Timeouts + 1)}
+                  >
+                    <Text style={styles.counterButtonText}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
       </View>
+
+      {/* End Game Button */}
+        <TouchableOpacity
+          style={[
+            styles.endGameButton,
+            !gameStarted && styles.endGameButtonDisabled,
+          ]}
+          onPress={() => navigation.navigate('Home')}
+          disabled={!gameStarted}
+        >
+          <Text style={[
+            styles.endGameText,
+            !gameStarted && styles.endGameTextDisabled,
+          ]}>
+            END GAME
+          </Text>
+        </TouchableOpacity>
+
+        {/* Bottom spacing */}
+        <View style={{ height: 40 }} />
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -268,7 +465,41 @@ const styles = StyleSheet.create({
   header: {
     paddingTop: TOP_PADDING,
     paddingHorizontal: 20,
-    paddingBottom: 10,
+    paddingBottom: 20,
+  },
+  titleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backIcon: {
+    marginRight: 8,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: SCREEN.text,
+  },
+  content: {
+    flex: 1,
+  },
+  endGameButton: {
+    backgroundColor: BASKETBALL.primary,
+    paddingVertical: 18,
+    borderRadius: 30,
+    alignItems: 'center',
+    marginTop: 50,
+    marginHorizontal: 20,
+  },
+  endGameButtonDisabled: {
+    backgroundColor: '#CCCCCC',
+  },
+  endGameText: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  endGameTextDisabled: {
+    color: '#888888',
   },
   scoreboardCard: {
     backgroundColor: '#FFFFFF',
@@ -340,8 +571,32 @@ const styles = StyleSheet.create({
   shotClockValue: {
     fontSize: 36,
     fontWeight: 'bold',
-    color: '#FF6B6B',
+    color: BASKETBALL.primary,
     marginTop: 5,
+  },
+  shotClockWarning: {
+    color: '#FF6B6B',
+  },
+  shotClockExpired: {
+    color: '#FF0000',
+  },
+  shotClockControls: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  shotClockResetButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: BASKETBALL.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    borderRadius: 25,
+    gap: 8,
+  },
+  shotClockResetText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   foulsRow: {
     flexDirection: 'row',
@@ -404,7 +659,7 @@ const styles = StyleSheet.create({
   resetButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#888888',
+    backgroundColor: '#333333',
     paddingVertical: 12,
     paddingHorizontal: 25,
     borderRadius: 25,
@@ -414,6 +669,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  resetClockRow: {
+    alignItems: 'center',
+    marginBottom: 15,
   },
   scoreControlsRow: {
     flexDirection: 'row',
@@ -444,6 +703,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 25,
     borderRadius: 12,
   },
+  scoreButtonDisabled: {
+    backgroundColor: '#CCCCCC',
+  },
   minusButton: {
     backgroundColor: '#CC4A10',
   },
@@ -451,5 +713,71 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 20,
     fontWeight: '600',
+  },
+  scoreButtonTextDisabled: {
+    color: '#888888',
+  },
+  // Fouls & Timeouts Controls
+  foulsControlsSection: {
+    marginTop: 30,
+  },
+  timeoutsControlsSection: {
+    marginTop: 30,
+  },
+  controlsSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: SCREEN.text,
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+  foulsControlsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  timeoutsControlsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  foulControlItem: {
+    alignItems: 'center',
+  },
+  timeoutControlItem: {
+    alignItems: 'center',
+  },
+  foulControlLabel: {
+    fontSize: 14,
+    color: SCREEN.textDim,
+    marginBottom: 10,
+  },
+  timeoutControlLabel: {
+    fontSize: 14,
+    color: SCREEN.textDim,
+    marginBottom: 10,
+  },
+  counterControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 15,
+  },
+  counterButton: {
+    backgroundColor: BASKETBALL.primary,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  counterButtonText: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  counterValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: SCREEN.text,
+    minWidth: 30,
+    textAlign: 'center',
   },
 });
